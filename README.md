@@ -16,11 +16,9 @@ Dictionary definitions, forms, and examples are adapted from [Wiktionary contrib
 
 ## GitHub Pages
 
-After pushing to `Klicken/word-of-the-day`:
+Pushing to `main` runs the **Publish website** workflow in `.github/workflows/pages.yml`. It publishes `index.html`, `dictionary.js`, and `.nojekyll` directly, with no build dependencies. New pushes replace any older run of this workflow. You can also start it manually from the repository's **Actions** tab.
 
-1. Open the repository's **Settings → Pages**.
-2. Set **Source** to **Deploy from a branch**.
-3. Choose **main** and **/(root)**, then save.
+In **Settings → Pages**, set **Source** to **GitHub Actions**.
 
 The website will be available at `https://klicken.github.io/word-of-the-day/` once GitHub finishes deploying.
 
