@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Dictionary parser checks</title>
+<style>body{font:16px/1.6 sans-serif;max-width:900px;margin:40px auto;padding:0 20px}.pass{color:#27693c}.fail{color:#a31c32}</style>
+<h1>Dictionary parser checks</h1>
+<p>These use synthetic entries. Open this file in a browser; no internet or dependencies are needed.</p>
+<ol id="results"></ol>
+<script src="../dictionary.js"></script>
+<script>
+'use strict';
+window.testResults = {passed:0,failed:0};
+function check(name,run){const item=document.createElement('li');try{run();item.className='pass';item.textContent='PASS: '+name;testResults.passed++;}catch(error){item.className='fail';item.textContent='FAIL: '+name+' — '+error.message;testResults.failed++;}document.getElementById('results').append(item);}
+function equal(actual,expected){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error(JSON.stringify(actual)+' !== '+JSON.stringify(expected));}
+const examples='<ol><li>a test meaning<dl><dd><div class="h-usage-example"><i class="e-example" lang="sv">Det här är ett exempel.</i><span class="e-translation">This is an example.</span></div></dd><dd><div class="h-usage-example"><i class="e-example" lang="sv">Här kommer ännu ett exempel.</i><span class="e-translation">Here is another example.</span></div></dd></dl></li></ol>';
+function fixture(type,content='',options={}){return {parse:{title:options.title||'exempel',revid:123,text:`<section><h2 id="${options.language||'Swedish'}">Swedish</h2><section><h3>${type}</h3><p><span class="headword-line"><strong lang="sv">exempel</strong><span class="gender">n</span></span></p>${examples}${content}</section></section>`}};}
+const verbTable='<table class="inflection-table"><tr><th>supine</th><td><span lang="sv">läst</span></td><td><span lang="sv">lästs</span></td></tr><tr><th>indicative</th><td><span lang="sv">läser</span></td><td><span lang="sv">läste</span></td><td><span lang="sv">läses</span></td><td><span lang="sv">lästes</span></td></tr></table>';
+const nounTable='<table class="inflection-table"><tr><th>singular</th><th>indefinite</th><td><span lang="sv">äpple</span></td><td><span lang="sv">äpples</span></td></tr><tr><th>definite</th><td><span lang="sv">äpplet</span></td></tr><tr><th>plural</th><th>indefinite</th><td><span lang="sv">äpplen</span></td></tr><tr><th>definite</th><td><span lang="sv">äpplena</span></td></tr></table>';
+const adjectiveTable='<table class="inflection-table"><tr><th>common singular</th><td><span lang="sv">vänlig</span></td><td><span lang="sv">vänligare</span></td></tr><tr><th>neuter singular</th><td><span lang="sv">vänligt</span></td></tr><tr><th>plural</th><td><span lang="sv">vänliga</span></td></tr></table>';
+check('verbs use active forms, not passive forms',()=>equal(WordDictionary.parseEntry(fixture('Verb',verbTable,{title:'läsa'}),'verb').forms.map(form=>form.value),['läsa','läser','läste','läst']));
+check('nouns retain gender, number, and definiteness',()=>equal(WordDictionary.parseEntry(fixture('Noun',nounTable,{title:'äpple'}),'noun').forms.map(form=>form.value),['ett äpple','äpplet','äpplen','äpplena']));
+check('adjectives have en, ett, plural, and comparative forms',()=>equal(WordDictionary.parseEntry(fixture('Adjective',adjectiveTable,{title:'vänlig'}),'adjective').forms.map(form=>form.value),['vänlig','vänligt','vänliga','vänligare']));
+check('adverbs have an unchanged form',()=>equal(WordDictionary.parseEntry(fixture('Adverb'),'adverb').forms,[{label:'Unchanged form',value:'exempel'}]));
+check('entries with missing inflections are rejected',()=>equal(WordDictionary.parseEntry(fixture('Verb'),'verb'),null));
+check('entries without Swedish sections are rejected',()=>equal(WordDictionary.parseEntry(fixture('Adverb','',{language:'Norwegian'}),'adverb'),null));
+check('the requested word type is enforced',()=>equal(WordDictionary.parseEntry(fixture('Adverb'),'noun'),null));
+check('HTML in page titles is rejected',()=>equal(WordDictionary.parseEntry(fixture('Adverb','',{title:'<img onerror=alert(1)>'}),'adverb'),null));
+check('two translated examples are required',()=>{const data=fixture('Adverb');data.parse.text=data.parse.text.replace('class="e-translation"','class="not-a-translation"');equal(WordDictionary.parseEntry(data,'adverb'),null);});
+check('source URLs retain the revision and license',()=>{const word=WordDictionary.parseEntry(fixture('Adverb'),'adverb');equal(new URL(word.source.url).searchParams.get('oldid'),'123');equal(word.source.license,'https://creativecommons.org/licenses/by-sa/4.0/');});
+check('older heading layouts work',()=>{const data=fixture('Adverb');data.parse.text=data.parse.text.replaceAll('<section>','').replaceAll('</section>','');equal(WordDictionary.parseEntry(data,'adverb').examples.length,2);});
+check('unsafe pronunciation URLs are ignored',()=>{const data=fixture('Adverb','<audio><source src="https://example.com/foreign.mp3"></audio>');equal(WordDictionary.parseEntry(data,'adverb').source.audio,'');});
+check('unsafe recording credit URLs are ignored',()=>{const data=fixture('Adverb','<table class="audiotable"><tr><td><a href="javascript:alert(1)//File:">file</a></td></tr></table>');equal(WordDictionary.parseEntry(data,'adverb').source.audioPage,'');});
+document.title = `${testResults.passed} passed, ${testResults.failed} failed — Dictionary checks`;
+</script>
+</html>
